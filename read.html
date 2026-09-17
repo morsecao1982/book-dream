@@ -71,6 +71,22 @@
 
 <script src="js/bookdata.js"></script>
 <script>
+// ---- Bookmark ----
+const BOOKMARK_KEY = 'sjdm_bookmark';
+
+function saveBookmark(idx) {
+  const ch = BOOK_DATA[idx];
+  if (!ch) return;
+  localStorage.setItem(BOOKMARK_KEY, JSON.stringify({ idx, id: ch.id, title: ch.title, ts: Date.now() }));
+}
+
+function loadBookmark() {
+  try {
+    const raw = localStorage.getItem(BOOKMARK_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
 // ---- State ----
 let currentIdx = 0;
 
@@ -144,6 +160,9 @@ function render(idx) {
   // Scroll to top
   window.scrollTo(0, 0);
   currentIdx = idx;
+
+  // Auto-save bookmark
+  saveBookmark(idx);
 }
 
 function escHtml(s) {
@@ -159,13 +178,19 @@ function navigate(dir) {
   if (next >= 0 && next < BOOK_DATA.length) render(next);
 }
 
-// ---- Initial load from hash ----
+// ---- Initial load ----
 function loadFromHash() {
   const hash = location.hash.replace('#', '');
   let idx = 0;
   if (hash) {
     const found = BOOK_DATA.findIndex(ch => ch.id === hash);
     if (found >= 0) idx = found;
+  } else {
+    // No hash — restore bookmark if available
+    const bm = loadBookmark();
+    if (bm && bm.idx >= 0 && bm.idx < BOOK_DATA.length) {
+      idx = bm.idx;
+    }
   }
   render(idx);
 }

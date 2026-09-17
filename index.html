@@ -59,6 +59,59 @@
 .part-card-subtitle { font-size: 12px; color: var(--ink-faint); font-family: var(--font-ui); margin-bottom: 12px; }
 .part-card-desc { font-size: 13px; color: var(--ink-light); line-height: 1.7; }
 .part-card-count { font-size: 11px; color: var(--ink-faint); font-family: var(--font-ui); margin-top: 12px; }
+
+/* Continue reading banner */
+.continue-banner {
+  display: none;
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: #fff;
+  border-radius: 50px;
+  padding: 14px 24px;
+  display: none;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  z-index: 100;
+  max-width: calc(100vw - 32px);
+  animation: slideUp 0.4s ease;
+}
+@keyframes slideUp {
+  from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+}
+.continue-banner.visible { display: flex; }
+.continue-text { font-family: var(--font-ui); font-size: 13px; line-height: 1.4; }
+.continue-text strong { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.continue-text span { color: rgba(255,255,255,0.55); font-size: 12px; }
+.continue-btn {
+  background: var(--gold);
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  padding: 8px 20px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.continue-btn:hover { background: var(--gold-light); color: #fff; text-decoration: none; }
+.continue-close {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.continue-close:hover { color: rgba(255,255,255,0.8); }
 </style>
 </head>
 <body>
@@ -174,6 +227,16 @@
   </div>
 </section>
 
+<!-- Continue Reading Banner -->
+<div class="continue-banner" id="continue-banner">
+  <div class="continue-text">
+    <strong id="continue-title"></strong>
+    <span>上次阅读位置</span>
+  </div>
+  <a href="#" class="continue-btn" id="continue-link">继续阅读</a>
+  <button class="continue-close" onclick="dismissBanner()" aria-label="关闭">×</button>
+</div>
+
 <footer class="landing-footer">
   <p>《逝去的梦》·郭锦文 著 · 2006</p>
 </footer>
@@ -183,6 +246,20 @@
 function togglePart(id) {
   document.getElementById(id).classList.toggle('collapsed');
 }
+
+// Continue reading banner
+const BOOKMARK_KEY = 'sjdm_bookmark';
+function dismissBanner() {
+  document.getElementById('continue-banner').classList.remove('visible');
+}
+try {
+  const bm = JSON.parse(localStorage.getItem(BOOKMARK_KEY) || 'null');
+  if (bm && bm.idx > 0 && bm.title) {
+    document.getElementById('continue-title').textContent = bm.title;
+    document.getElementById('continue-link').href = 'read.html#' + bm.id;
+    setTimeout(() => document.getElementById('continue-banner').classList.add('visible'), 600);
+  }
+} catch {}
 
 // Populate TOC from book data
 const lists = { 1: 'list-p1', 2: 'list-p2', 3: 'list-p3' };
