@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>阅读 — 逝去的梦</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<div class="reader-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a href="index.html" class="sidebar-home">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        返回首页
+      </a>
+      <div class="sidebar-book-title">逝去的梦</div>
+      <div class="sidebar-book-author">郭锦文 著</div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav">
+      <!-- Populated by JS -->
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <main class="reader-main">
+
+    <!-- Top bar -->
+    <div class="reader-topbar">
+      <button class="topbar-menu-btn" id="menu-btn" onclick="openSidebar()" aria-label="目录">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-progress-wrap">
+        <div class="topbar-progress-bar" id="progress-bar" style="width:0%"></div>
+      </div>
+      <div class="topbar-chapter-info" id="topbar-info"></div>
+    </div>
+
+    <!-- Chapter content -->
+    <article class="chapter-wrap" id="chapter-wrap">
+      <div class="chapter-meta" id="chapter-meta"></div>
+      <h1 class="chapter-title" id="chapter-title"></h1>
+      <div class="chapter-body" id="chapter-body"></div>
+    </article>
+
+    <!-- Navigation -->
+    <div class="chapter-nav">
+      <button class="nav-btn nav-btn-prev" id="btn-prev" onclick="navigate(-1)">
+        <span>←</span>
+        <div>
+          <span class="btn-label">上一章</span>
+          <span id="prev-title"></span>
+        </div>
+      </button>
+      <button class="nav-btn nav-btn-next" id="btn-next" onclick="navigate(1)">
+        <span>→</span>
+        <div>
+          <span class="btn-label">下一章</span>
+          <span id="next-title"></span>
+        </div>
+      </button>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/bookdata.js"></script>
+<script>
+// ---- State ----
+let currentIdx = 0;
+
+// ---- Build sidebar ----
+const nav = document.getElementById('sidebar-nav');
+const partLabels = {
+  0: '引言',
+  1: '上部 · 八千里路云和月',
+  2: '中部 · 月落乌啼霜满天',
+  3: '下部 · 无边落木潇潇下',
+};
+const partColors = { 1: 'badge-1', 2: 'badge-2', 3: 'badge-3' };
+
+let lastPart = -1;
+BOOK_DATA.forEach((ch, idx) => {
+  if (ch.part !== lastPart) {
+    lastPart = ch.part;
+    const label = document.createElement('div');
+    label.className = 'sidebar-part-label';
+    label.textContent = partLabels[ch.part] || '';
+    nav.appendChild(label);
+  }
+  const btn = document.createElement('button');
+  btn.className = 'sidebar-ch-link';
+  btn.id = 'nav-' + ch.id;
+  btn.innerHTML = `<span class="sidebar-ch-num">${ch.part === 0 ? '' : ch.num}</span><span>${ch.title}</span>`;
+  btn.onclick = () => { goTo(idx); closeSidebar(); };
+  nav.appendChild(btn);
+});
+
+// ---- Render ----
+function render(idx) {
+  const ch = BOOK_DATA[idx];
+  if (!ch) return;
+
+  // Update URL hash silently
+  history.replaceState(null, '', '#' + ch.id);
+
+  // Chapter meta
+  const meta = ch.part === 0 ? '引言' :
+    `${ch.partName} · 第 ${ch.num} 章`;
+  document.getElementById('chapter-meta').textContent = meta;
+  document.getElementById('chapter-title').textContent = ch.title;
+  document.title = ch.title + ' — 逝去的梦';
+
+  // Body
+  const body = document.getElementById('chapter-body');
+  body.innerHTML = ch.paragraphs.map(p => `<p>${escHtml(p)}</p>`).join('');
+
+  // Progress
+  const pct = Math.round((idx / (BOOK_DATA.length - 1)) * 100);
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('topbar-info').textContent = `${idx + 1} / ${BOOK_DATA.length}`;
+
+  // Prev / Next
+  const prevBtn = document.getElementById('btn-prev');
+  const nextBtn = document.getElementById('btn-next');
+  prevBtn.disabled = idx === 0;
+  nextBtn.disabled = idx === BOOK_DATA.length - 1;
+  document.getElementById('prev-title').textContent = idx > 0 ? BOOK_DATA[idx-1].title : '';
+  document.getElementById('next-title').textContent = idx < BOOK_DATA.length-1 ? BOOK_DATA[idx+1].title : '';
+
+  // Sidebar highlight
+  document.querySelectorAll('.sidebar-ch-link.active').forEach(el => el.classList.remove('active'));
+  const active = document.getElementById('nav-' + ch.id);
+  if (active) {
+    active.classList.add('active');
+    active.scrollIntoView({ block: 'nearest' });
+  }
+
+  // Scroll to top
+  window.scrollTo(0, 0);
+  currentIdx = idx;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function goTo(idx) {
+  render(idx);
+}
+
+function navigate(dir) {
+  const next = currentIdx + dir;
+  if (next >= 0 && next < BOOK_DATA.length) render(next);
+}
+
+// ---- Initial load from hash ----
+function loadFromHash() {
+  const hash = location.hash.replace('#', '');
+  let idx = 0;
+  if (hash) {
+    const found = BOOK_DATA.findIndex(ch => ch.id === hash);
+    if (found >= 0) idx = found;
+  }
+  render(idx);
+}
+
+// ---- Keyboard navigation ----
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigate(1);
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') navigate(-1);
+});
+
+// ---- Mobile sidebar ----
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebar-overlay').classList.add('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
+
+loadFromHash();
+</script>
+</body>
+</html>
