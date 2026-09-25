@@ -1,4 +1,11 @@
 /* ====== Base ====== */
+@font-face {
+  font-family: 'Ma Shan Zheng';
+  src: url('../fonts/MaShanZheng-subset.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -54,7 +61,19 @@ a:hover { color: var(--gold-light); text-decoration: underline; }
   inset: 0;
   background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
-.hero-inner { position: relative; max-width: 640px; }
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('../img/calligraphy/dingfengbo-full.jpg');
+  background-repeat: no-repeat;
+  background-position: center 40%;
+  background-size: 100% auto;
+  filter: invert(1) grayscale(1) brightness(1.3) contrast(1.1);
+  mix-blend-mode: screen;
+  opacity: 0.14;
+}
+.hero-inner { position: relative; z-index: 1; max-width: 640px; }
 .hero-badge {
   display: inline-block;
   font-family: var(--font-ui);
@@ -78,12 +97,14 @@ a:hover { color: var(--gold-light); text-decoration: underline; }
 }
 .hero-author {
   font-size: 20px;
-  color: rgba(255,255,255,0.6);
+  font-weight: 700;
+  color: rgba(255,255,255,0.85);
   letter-spacing: 0.3em;
   margin-bottom: 32px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.6);
 }
 .hero-author span {
-  color: rgba(255,255,255,0.9);
+  color: #fff;
 }
 .hero-divider {
   width: 60px;
@@ -94,11 +115,13 @@ a:hover { color: var(--gold-light); text-decoration: underline; }
 }
 .hero-tagline {
   font-size: clamp(14px, 2.5vw, 17px);
-  color: rgba(255,255,255,0.55);
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
   line-height: 2;
   max-width: 480px;
   margin: 0 auto 48px;
   font-style: italic;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.6);
 }
 .hero-cta {
   display: inline-flex;
@@ -123,6 +146,7 @@ a:hover { color: var(--gold-light); text-decoration: underline; }
 }
 .hero-scroll {
   position: absolute;
+  z-index: 1;
   bottom: 28px;
   left: 50%;
   transform: translateX(-50%);
@@ -158,19 +182,106 @@ a:hover { color: var(--gold-light); text-decoration: underline; }
 @media (max-width: 660px) {
   .about-grid { grid-template-columns: 1fr; gap: 32px; }
 }
-.about-text { font-size: 16px; line-height: 2; color: var(--ink-light); }
-.about-text p { margin-bottom: 16px; }
-.about-photos {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-.about-photos img {
-  width: 100%;
+.about-text {
+  font-size: 16px;
+  line-height: 2;
+  color: var(--ink-light);
+  max-width: 720px;
+  margin: 0 auto;
+  background: rgba(253, 248, 240, 0.88);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  aspect-ratio: 3/4;
+  padding: 36px 40px;
+  box-shadow: 0 2px 24px rgba(30,18,8,0.06);
+}
+.about-text p { margin-bottom: 16px; }
+.preface-text {
+  font-family: 'Ma Shan Zheng', var(--font-body);
+  font-size: 19px;
+  line-height: 2.1;
+  color: var(--ink);
+}
+.preface-text p { margin-bottom: 16px; }
+@media (max-width: 660px) {
+  .about-text { padding: 24px 22px; }
+}
+
+/* Ambient calligraphy backgrounds — faint ink-on-paper texture behind sections */
+.ink-bg { position: relative; }
+.ink-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: cover;
+  mix-blend-mode: multiply;
+  filter: grayscale(60%) contrast(0.9);
+  opacity: 0.24;
+}
+.ink-bg > * { position: relative; z-index: 1; }
+.ink-bg-wanghaichao::before { background-image: url('../img/calligraphy/wanghaichao-full.jpg'); }
+.ink-bg-furonglou::before   { background-image: url('../img/calligraphy/furonglou-full.jpg'); opacity: 0.08; }
+
+/* Author feature section */
+.author-section {
+  position: relative;
+  padding: 96px 24px;
+  overflow: hidden;
+}
+.author-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url('../img/calligraphy/songtao-full.jpg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  mix-blend-mode: multiply;
+  filter: grayscale(60%) contrast(0.9);
+  opacity: 0.24;
+}
+.author-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 980px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 56px;
+  align-items: center;
+}
+.author-portrait-frame {
+  background: var(--paper-card);
+  border: 1px solid var(--border);
+  padding: 10px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+.author-portrait-frame img {
+  width: 100%;
+  aspect-ratio: 4/5;
   object-fit: cover;
+  object-position: center 22%;
+  border-radius: 4px;
+  display: block;
+}
+.author-name { font-size: 32px; font-weight: 800; color: var(--ink); margin: 4px 0 6px; }
+.author-name-sub {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--ink-faint);
+  letter-spacing: 1px;
+  margin-bottom: 22px;
+}
+.author-bio { font-size: 15.5px; line-height: 2; color: var(--ink-light); }
+.author-bio p { margin-bottom: 14px; }
+@media (max-width: 760px) {
+  .author-inner { grid-template-columns: 1fr; gap: 28px; text-align: center; }
+  .author-portrait-frame { max-width: 320px; margin: 0 auto; }
 }
 
 /* TOC section */
@@ -231,9 +342,12 @@ a:hover { color: var(--gold-light); text-decoration: underline; }
 .toc-item a {
   display: block;
   padding: 6px 0;
-  font-size: 14px;
-  color: var(--ink-light);
-  line-height: 1.4;
+  font-family: var(--font-ui);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.6;
+  letter-spacing: 0.2px;
   transition: color 0.15s;
   border-bottom: 1px solid transparent;
 }

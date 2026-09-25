@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>逝去的梦 — 郭锦文 著</title>
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=17">
 <style>
 .intro-quote {
   background: var(--paper-card);
@@ -57,7 +57,7 @@
 }
 .part-card-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; line-height: 1.4; }
 .part-card-subtitle { font-size: 12px; color: var(--ink-faint); font-family: var(--font-ui); margin-bottom: 12px; }
-.part-card-desc { font-size: 13px; color: var(--ink-light); line-height: 1.7; }
+.part-card-desc { font-size: 15px; color: var(--ink-light); line-height: 1.7; }
 .part-card-count { font-size: 11px; color: var(--ink-faint); font-family: var(--font-ui); margin-top: 12px; }
 
 /* Continue reading banner */
@@ -136,24 +136,32 @@
   <div class="hero-scroll">↓</div>
 </section>
 
-<!-- About -->
-<section class="about-section">
-  <div class="section-title">关于本书</div>
-  <div class="about-grid">
-    <div class="about-text">
-      <p>这是一部自传体纪实文学作品，记录了作者郭锦文大半生的生活轨迹。全书分三部，从孩提时代的横山县写起，跨越了中国历史上最动荡的数十年。</p>
-      <p>作者力求真实，忠诚地对待历史，不粉饰、不夸张、不虚构。写出书稿后曾自印一百册分赠朋友，受到广泛传阅，有不少读者为之流泪。</p>
-      <div class="intro-quote">
-        "本来是一个平凡人的平凡经历，由于时代的不平凡，书里的故事就显得不平凡了。"
-      </div>
-      <p>全书共一百零七章。作者现已是耄耋之年，不图功利，但求把自己的见解、感受和生活中激起的情感浪花用文字表述出来，留与后人。</p>
+<!-- Author -->
+<section class="author-section" id="author-section">
+  <div class="author-inner">
+    <div class="author-portrait-frame">
+      <img src="img/author-portrait.jpg" alt="作者郭锦文" loading="lazy">
     </div>
     <div>
-      <div class="about-photos">
-        <img src="img/100_3639.jpg" alt="作者照片" loading="lazy">
-        <img src="img/100_3648.jpg" alt="作者照片" loading="lazy">
+      <div class="section-title">关于作者</div>
+      <h2 class="author-name">郭锦文</h2>
+      <p class="author-name-sub">1930s 生于横山县 · 晚年潜心笔耕与书法</p>
+      <div class="author-bio">
+        <p>大半生历经中国近代史上最动荡的数十年，晚年提笔写下这部自传体纪实作品，也常以书法抄录古诗词自娱、赠答亲友。</p>
+        <p>力求真实，不粉饰、不夸张、不虚构——这是他写作与做人的准则。</p>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- About -->
+<section class="about-section ink-bg ink-bg-wanghaichao" id="about-section">
+  <div class="about-text preface-text">
+    <p>这部书是姥爷写的自传，初读时，尚是涉世未深，血气方刚之年。只觉故事精彩，嫉书中之恶如仇，从书中之善入流。但归根到底，除了钦佩姥爷的学识经历，更像是在读他人的人生，种种经历故事，离自己是那么遥远。</p>
+    <p>恍惚之前已过二十余载，与姥爷已是隔世，自己也远离故土，漂泊许久。还记得初来美国的时候，行李箱里是装着这本书的。那日突然惊觉，数次颠沛搬迁之后，早已不知这本书的下落。于是翻箱倒柜，从各种杂物之中终于找到了她。</p>
+    <p>再次翻开，已是不惑之年！</p>
+    <p>细细品读，突然感觉那些遥远的故事，竟然穿越时空，嗖的一下嵌入了自己的骨血里。那是一种深深的认同感，那是像在读自己的人生，自己的故事。我知道，如果是我站在故事里，也会做一样的事，说一样的话。第一次感觉到了生命的长度，绝非区区四十几个春秋，而是长辈们的延续。虽然人们总说，每一代人有每一代人自己的幸福与苦难，但是延续的是刻在骨子里的性格与倔强。而这份性格与倔强也必将一直延续下去。</p>
+    <p>于是想借助网络，让更多的人读到姥爷精彩的人生，了解我们背负的历史与人生。而且更想听到读者们的声音。因此在网页上添加了评论功能，期待看到更多的感受与讨论。</p>
   </div>
 
   <!-- Part cards -->
@@ -161,21 +169,18 @@
     <a href="read.html#p1c01" class="part-card">
       <div class="part-card-badge badge-1">上部</div>
       <div class="part-card-title">八千里路云和月</div>
-      <div class="part-card-subtitle">Part I</div>
       <div class="part-card-desc">从孩提时代的横山县写起，经历了家庭变故、少年求学，直至1948年北平围城为止。</div>
       <div class="part-card-count">共 39 章</div>
     </a>
     <a href="read.html#p2c01" class="part-card">
       <div class="part-card-badge badge-2">中部</div>
       <div class="part-card-title">月落乌啼霜满天</div>
-      <div class="part-card-subtitle">Part II</div>
       <div class="part-card-desc">从1949年北平和平解放，到1958年被打成"右派"为止。</div>
       <div class="part-card-count">共 27 章</div>
     </a>
     <a href="read.html#p3c01" class="part-card">
       <div class="part-card-badge badge-3">下部</div>
       <div class="part-card-title">无边落木潇潇下</div>
-      <div class="part-card-subtitle">Part III</div>
       <div class="part-card-desc">从"人"变"鬼"，又从"鬼"变人的二十一年坎坷人生。</div>
       <div class="part-card-count">共 41 章</div>
     </a>
@@ -183,7 +188,7 @@
 </section>
 
 <!-- Table of Contents -->
-<section class="toc-section">
+<section class="toc-section ink-bg ink-bg-furonglou" id="toc-section">
   <div class="toc-inner">
     <div class="section-title">目录</div>
     <h2 class="toc-heading">全书章节</h2>
