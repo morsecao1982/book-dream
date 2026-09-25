@@ -87,13 +87,15 @@ a:hover { color: var(--gold-light); text-decoration: underline; }
   margin-bottom: 36px;
 }
 .hero-title {
-  font-size: clamp(52px, 10vw, 88px);
-  font-weight: 900;
-  color: #fff;
-  letter-spacing: 0.15em;
-  line-height: 1.1;
-  text-shadow: 0 4px 24px rgba(0,0,0,0.4);
   margin-bottom: 16px;
+  line-height: 1.1;
+}
+.hero-title img {
+  width: clamp(300px, 50vw, 620px);
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  filter: drop-shadow(0 4px 24px rgba(0,0,0,0.4));
 }
 .hero-author {
   font-size: 20px;
