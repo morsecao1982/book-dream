@@ -223,8 +223,16 @@ a:hover { color: var(--gold-light); text-decoration: underline; }
   opacity: 0.24;
 }
 .ink-bg > * { position: relative; z-index: 1; }
-.ink-bg-wanghaichao::before { background-image: url('../img/calligraphy/wanghaichao-full.jpg'); }
+.ink-bg-wanghaichao::before { background-image: url('../img/calligraphy/wanghaichao-full.jpg'); opacity: 0.34; }
 .ink-bg-furonglou::before   { background-image: url('../img/calligraphy/furonglou-full.jpg'); opacity: 0.08; }
+
+/* On narrow/tall mobile viewports, "cover" over-zooms a wide image trying to
+   also cover the (often very tall) section height, shrinking it down to an
+   unrecognizable sliver. Pin zoom to a fixed multiple of width instead. */
+@media (max-width: 660px) {
+  .ink-bg-wanghaichao::before { background-size: 220% auto; background-position: center 15%; }
+  .ink-bg-furonglou::before   { background-size: 160% auto; background-position: center 10%; }
+}
 
 /* Author feature section */
 .author-section {
