@@ -70,6 +70,7 @@
 </div>
 
 <script src="js/bookdata.js"></script>
+<script src="js/supabase.min.js"></script>
 <script>
 // ---- Bookmark ----
 const BOOKMARK_KEY = 'sjdm_bookmark';
@@ -89,6 +90,335 @@ function loadBookmark() {
 
 // ---- State ----
 let currentIdx = 0;
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ==========================================================
+// Inline annotations — select a phrase, comment on it,
+// like Google Docs. Backed by Supabase (shared across all
+// deployments/visitors).
+// ==========================================================
+const sb = window.supabase.createClient(
+  'https://hhrsebzfxggjbnrxvdzh.supabase.co',
+  'sb_publishable_WkgTRX1EiKm3aU2B4DO6mA_bcYR23Tf'
+);
+const COMMENT_NAME_KEY = 'sjdm_comment_name';
+
+let currentChapterComments = []; // all comments for the chapter on screen
+let pendingSelection = null;     // { pIdx, startOffset, endOffset, quote, rect }
+
+function formatAnnotDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function getSavedName() {
+  try { return localStorage.getItem(COMMENT_NAME_KEY) || ''; } catch { return ''; }
+}
+function saveName(name) {
+  try { localStorage.setItem(COMMENT_NAME_KEY, name); } catch {}
+}
+
+// Walk a paragraph's DOM (plain text + <mark> children) to compute the
+// plain-text character offset of (node, nodeOffset). This stays correct
+// whether or not highlight <mark> tags are already present.
+function getOffsetInParagraph(pEl, targetNode, targetOffset) {
+  let offset = 0;
+  let found = false;
+  (function walk(node) {
+    if (found) return;
+    if (node === targetNode) {
+      offset += targetOffset;
+      found = true;
+      return;
+    }
+    if (node.nodeType === Node.TEXT_NODE) {
+      offset += node.textContent.length;
+      return;
+    }
+    for (const child of node.childNodes) {
+      walk(child);
+      if (found) return;
+    }
+  })(pEl);
+  return offset;
+}
+
+// Merge overlapping/adjacent comment ranges in one paragraph so a phrase
+// commented on by multiple people renders as a single highlighted span.
+function mergeRanges(comments) {
+  const sorted = [...comments].sort((a, b) => a.start_offset - b.start_offset);
+  const merged = [];
+  for (const c of sorted) {
+    const last = merged[merged.length - 1];
+    if (last && c.start_offset <= last.end) {
+      last.end = Math.max(last.end, c.end_offset);
+      last.ids.push(c.id);
+    } else {
+      merged.push({ start: c.start_offset, end: c.end_offset, ids: [c.id] });
+    }
+  }
+  return merged;
+}
+
+function buildParagraphHTML(text, pIdx) {
+  const comments = currentChapterComments.filter(c => c.paragraph_index === pIdx);
+  if (comments.length === 0) return escHtml(text);
+  const ranges = mergeRanges(comments);
+  let html = '';
+  let cursor = 0;
+  for (const r of ranges) {
+    const start = Math.max(0, Math.min(r.start, text.length));
+    const end = Math.max(start, Math.min(r.end, text.length));
+    if (start > cursor) html += escHtml(text.slice(cursor, start));
+    html += `<mark class="hl-comment" data-ids="${r.ids.join(',')}">${escHtml(text.slice(start, end))}</mark>`;
+    cursor = end;
+  }
+  if (cursor < text.length) html += escHtml(text.slice(cursor));
+  return html;
+}
+
+function renderParagraphs() {
+  const ch = BOOK_DATA[currentIdx];
+  const body = document.getElementById('chapter-body');
+  body.innerHTML = ch.paragraphs.map((p, i) => `<p data-p-idx="${i}">${buildParagraphHTML(p, i)}</p>`).join('');
+}
+
+async function loadChapterComments(chapterId) {
+  const { data, error } = await sb
+    .from('comments')
+    .select('*')
+    .eq('chapter_id', chapterId)
+    .order('start_offset', { ascending: true });
+
+  if (chapterId !== BOOK_DATA[currentIdx].id) return; // chapter changed while loading
+  currentChapterComments = error ? [] : (data || []);
+  renderParagraphs();
+}
+
+// ---- Floating "+ 评论" button, add-comment popup, and thread popover ----
+function ensureAnnotationDOM() {
+  if (document.getElementById('annot-add-btn')) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'annot-add-btn';
+  btn.className = 'annot-btn';
+  btn.textContent = '+ 评论';
+  btn.style.display = 'none';
+  btn.addEventListener('mousedown', (e) => e.preventDefault()); // keep selection alive
+  btn.addEventListener('click', () => {
+    if (pendingSelection) showAddPopup(pendingSelection);
+  });
+  document.body.appendChild(btn);
+
+  const popup = document.createElement('div');
+  popup.id = 'annot-popup';
+  popup.className = 'annot-popup';
+  popup.style.display = 'none';
+  popup.innerHTML =
+    '<div class="annot-popup-quote" id="annot-popup-quote"></div>' +
+    '<input type="text" id="annot-name" placeholder="您的称呼" maxlength="60">' +
+    '<textarea id="annot-body" placeholder="写下您的评论…" maxlength="2000" rows="3"></textarea>' +
+    '<div class="annot-popup-row">' +
+    '<span class="annot-hint" id="annot-hint"></span>' +
+    '<button class="annot-btn-cancel" id="annot-cancel" type="button">取消</button>' +
+    '<button class="annot-btn-submit" id="annot-submit" type="button">发表</button>' +
+    '</div>';
+  document.body.appendChild(popup);
+  popup.addEventListener('mousedown', (e) => e.stopPropagation());
+  document.getElementById('annot-cancel').addEventListener('click', hideAddPopup);
+  document.getElementById('annot-submit').addEventListener('click', submitPendingAnnotation);
+
+  const thread = document.createElement('div');
+  thread.id = 'annot-thread';
+  thread.className = 'annot-thread';
+  thread.style.display = 'none';
+  document.body.appendChild(thread);
+  thread.addEventListener('mousedown', (e) => e.stopPropagation());
+}
+
+function hideAddButton() {
+  const btn = document.getElementById('annot-add-btn');
+  if (btn) btn.style.display = 'none';
+  pendingSelection = null;
+}
+
+function showAddButton(rect, selInfo) {
+  pendingSelection = selInfo;
+  const btn = document.getElementById('annot-add-btn');
+  const top = Math.max(8, rect.top - 40);
+  const left = Math.min(window.innerWidth - 90, Math.max(8, rect.left));
+  btn.style.top = top + 'px';
+  btn.style.left = left + 'px';
+  btn.style.display = 'block';
+}
+
+function positionPopupNear(el, rect) {
+  const width = el.offsetWidth || 280;
+  let left = Math.min(window.innerWidth - width - 12, Math.max(12, rect.left));
+  let top = rect.bottom + 8;
+  if (top + 260 > window.innerHeight) top = Math.max(8, rect.top - 268);
+  el.style.left = left + 'px';
+  el.style.top = top + 'px';
+}
+
+function showAddPopup(selInfo) {
+  ensureAnnotationDOM();
+  hideThread();
+  const popup = document.getElementById('annot-popup');
+  document.getElementById('annot-popup-quote').textContent = '“' + selInfo.quote + '”';
+  document.getElementById('annot-name').value = getSavedName();
+  document.getElementById('annot-body').value = '';
+  document.getElementById('annot-hint').textContent = '';
+  popup.dataset.pIdx = selInfo.pIdx;
+  popup.dataset.start = selInfo.startOffset;
+  popup.dataset.end = selInfo.endOffset;
+  popup.dataset.quote = selInfo.quote;
+  popup.style.display = 'block';
+  positionPopupNear(popup, selInfo.rect);
+  hideAddButton();
+  document.getElementById('annot-body').focus();
+}
+
+function hideAddPopup() {
+  const popup = document.getElementById('annot-popup');
+  if (popup) popup.style.display = 'none';
+  window.getSelection().removeAllRanges();
+}
+
+async function submitPendingAnnotation() {
+  const popup = document.getElementById('annot-popup');
+  const name = document.getElementById('annot-name').value.trim();
+  const body = document.getElementById('annot-body').value.trim();
+  const hint = document.getElementById('annot-hint');
+  hint.textContent = '';
+
+  if (!name || !body) { hint.textContent = '请填写称呼和评论内容。'; return; }
+  if (name.length > 60 || body.length > 2000) { hint.textContent = '内容过长，请精简。'; return; }
+
+  const submitBtn = document.getElementById('annot-submit');
+  submitBtn.disabled = true;
+  submitBtn.textContent = '发送中…';
+
+  const ch = BOOK_DATA[currentIdx];
+  const { error } = await sb.from('comments').insert({
+    chapter_id: ch.id,
+    chapter_title: ch.title,
+    paragraph_index: parseInt(popup.dataset.pIdx, 10),
+    start_offset: parseInt(popup.dataset.start, 10),
+    end_offset: parseInt(popup.dataset.end, 10),
+    quote: popup.dataset.quote,
+    name,
+    body,
+  });
+
+  submitBtn.disabled = false;
+  submitBtn.textContent = '发表';
+
+  if (error) { hint.textContent = '发送失败，请检查网络后重试。'; return; }
+
+  saveName(name);
+  hideAddPopup();
+  loadChapterComments(ch.id);
+}
+
+function showThread(markEl) {
+  ensureAnnotationDOM();
+  hideAddPopup();
+  const ids = markEl.dataset.ids.split(',').map(s => parseInt(s, 10));
+  const items = currentChapterComments
+    .filter(c => ids.includes(c.id))
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  if (items.length === 0) return;
+
+  const thread = document.getElementById('annot-thread');
+  thread.innerHTML =
+    '<button class="annot-thread-close" id="annot-thread-close">&times;</button>' +
+    `<div class="annot-thread-quote">“${escHtml(items[0].quote)}”</div>` +
+    items.map(c => `
+      <div class="annot-thread-item">
+        <div class="annot-thread-head">
+          <span class="annot-thread-name">${escHtml(c.name)}</span>
+          <span class="annot-thread-date">${formatAnnotDate(c.created_at)}</span>
+        </div>
+        <div class="annot-thread-body">${escHtml(c.body)}</div>
+      </div>
+    `).join('') +
+    '<button class="annot-thread-reply" id="annot-thread-reply">+ 追加评论</button>';
+
+  thread.style.display = 'block';
+  const rect = markEl.getBoundingClientRect();
+  positionPopupNear(thread, rect);
+
+  document.getElementById('annot-thread-close').addEventListener('click', hideThread);
+  document.getElementById('annot-thread-reply').addEventListener('click', () => {
+    const first = items[0];
+    hideThread();
+    showAddPopup({
+      pIdx: first.paragraph_index,
+      startOffset: first.start_offset,
+      endOffset: first.end_offset,
+      quote: first.quote,
+      rect,
+    });
+  });
+}
+
+function hideThread() {
+  const thread = document.getElementById('annot-thread');
+  if (thread) thread.style.display = 'none';
+}
+
+function handleSelectionEnd() {
+  const sel = window.getSelection();
+  const chapterBody = document.getElementById('chapter-body');
+  if (!sel || sel.isCollapsed || sel.rangeCount === 0 || !chapterBody) { hideAddButton(); return; }
+
+  const range = sel.getRangeAt(0);
+  if (!chapterBody.contains(range.startContainer) || !chapterBody.contains(range.endContainer)) {
+    hideAddButton();
+    return;
+  }
+
+  const startP = (range.startContainer.nodeType === Node.TEXT_NODE ? range.startContainer.parentElement : range.startContainer).closest('p[data-p-idx]');
+  const endP = (range.endContainer.nodeType === Node.TEXT_NODE ? range.endContainer.parentElement : range.endContainer).closest('p[data-p-idx]');
+  if (!startP || !endP || startP !== endP) { hideAddButton(); return; }
+
+  const text = sel.toString();
+  if (!text.trim()) { hideAddButton(); return; }
+
+  const pIdx = parseInt(startP.dataset.pIdx, 10);
+  const startOffset = getOffsetInParagraph(startP, range.startContainer, range.startOffset);
+  const endOffset = getOffsetInParagraph(startP, range.endContainer, range.endOffset);
+  const rect = range.getBoundingClientRect();
+
+  showAddButton(rect, { pIdx, startOffset, endOffset, quote: text.trim(), rect });
+}
+
+function initAnnotationUI() {
+  ensureAnnotationDOM();
+  document.addEventListener('mouseup', (e) => {
+    if (e.target.closest('#annot-add-btn, #annot-popup, #annot-thread')) return;
+    setTimeout(handleSelectionEnd, 0);
+  });
+  document.addEventListener('touchend', (e) => {
+    if (e.target.closest('#annot-add-btn, #annot-popup, #annot-thread')) return;
+    setTimeout(handleSelectionEnd, 0);
+  });
+  document.getElementById('chapter-body').addEventListener('click', (e) => {
+    const mark = e.target.closest('mark.hl-comment');
+    if (mark) showThread(mark);
+  });
+  document.addEventListener('mousedown', (e) => {
+    if (!e.target.closest('#annot-add-btn, #annot-popup, #annot-thread, mark.hl-comment')) {
+      hideAddButton();
+      hideThread();
+    }
+  });
+  window.addEventListener('resize', () => { hideAddButton(); hideThread(); });
+}
 
 // ---- Build sidebar ----
 const nav = document.getElementById('sidebar-nav');
@@ -122,6 +452,11 @@ function render(idx) {
   const ch = BOOK_DATA[idx];
   if (!ch) return;
 
+  currentIdx = idx;
+  currentChapterComments = [];
+  hideAddButton();
+  hideThread();
+
   // Update URL hash silently
   history.replaceState(null, '', '#' + ch.id);
 
@@ -132,9 +467,8 @@ function render(idx) {
   document.getElementById('chapter-title').textContent = ch.title;
   document.title = ch.title + ' — 逝去的梦';
 
-  // Body
-  const body = document.getElementById('chapter-body');
-  body.innerHTML = ch.paragraphs.map(p => `<p>${escHtml(p)}</p>`).join('');
+  // Body (plain first; highlights render once comments load)
+  renderParagraphs();
 
   // Progress
   const pct = Math.round((idx / (BOOK_DATA.length - 1)) * 100);
@@ -159,14 +493,12 @@ function render(idx) {
 
   // Scroll to top
   window.scrollTo(0, 0);
-  currentIdx = idx;
 
   // Auto-save bookmark
   saveBookmark(idx);
-}
 
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // Load & render this chapter's annotations
+  loadChapterComments(ch.id);
 }
 
 function goTo(idx) {
@@ -211,6 +543,7 @@ function closeSidebar() {
   document.getElementById('sidebar-overlay').classList.remove('open');
 }
 
+initAnnotationUI();
 loadFromHash();
 </script>
 </body>
